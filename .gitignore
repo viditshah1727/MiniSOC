@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Virtual environment
+venv/
+.venv/
+
+# Secrets & local config
+.env
+
+# Database files (regenerate with scripts/seed_database.py)
+data/*.db
+data/*.db-journal
+
+# Editor/OS noise
+.vscode/
+.idea/
+*.swp
+.DS_Store

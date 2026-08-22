@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}MITRE ATT&CK{% endblock %}
+{% block page_title %}MITRE ATT&CK Coverage{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <h3>Technique Coverage</h3>
+  <p class="dim" style="margin-top:0">Techniques mapped by MiniSOC's detection
+  rules, with live detection counts from the alerts table. This is a small local
+  reference for the techniques this project detects — <b>not</b> an official or
+  complete MITRE ATT&amp;CK implementation
+  (see <a href="https://attack.mitre.org" target="_blank" rel="noopener">attack.mitre.org</a>).</p>
+
+  {% for t in techniques %}
+  <div class="mitre-card">
+    <span class="mitre-count" title="alerts mapped to this technique">{{ t.count }}</span>
+    <h4><span class="tid">{{ t.info.id }}</span> — {{ t.info.name }}</h4>
+    <div class="faint" style="margin-bottom:8px">Tactic: {{ t.info.tactic }}</div>
+    <p class="dim" style="margin:0 0 10px">{{ t.info.description }}</p>
+
+    {% if t.rules %}
+    <div style="margin-bottom:8px">
+      <span class="faint">Detection rules:</span>
+      {% for r in t.rules %}
+        <span class="badge st-NEW" style="margin-left:4px">{{ r.rule_code }} — {{ r.name }}</span>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if t.recent_alerts %}
+    <details>
+      <summary class="dim" style="cursor:pointer">Recent alerts ({{ t.recent_alerts | length }})</summary>
+      <table class="data" style="margin-top:8px">
+        <tbody>
+          {% for a in t.recent_alerts %}
+          <tr class="clickable" onclick="window.location='/alerts/{{ a.id }}'">
+            <td class="mono">#{{ a.id }}</td>
+            <td class="nowrap dim">{{ a.timestamp.strftime('%m-%d %H:%M') }}</td>
+            <td><span class="badge sev-{{ a.severity }}">{{ a.severity }}</span></td>
+            <td>{{ a.title }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </details>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

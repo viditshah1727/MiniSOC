@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+{% block page_title %}Reports{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <h3>Security Summary
+    <span class="right">
+      <a class="btn small primary" href="/api/reports/export.csv">Export CSV report</a>
+    </span>
+  </h3>
+  <div class="kpi-grid" style="margin-bottom:0">
+    <div class="kpi accent"><div class="label">Total Events</div><div class="value" id="r-events">—</div></div>
+    <div class="kpi"><div class="label">Total Alerts</div><div class="value" id="r-alerts">—</div></div>
+    <div class="kpi critical"><div class="label">Critical Alerts</div><div class="value" id="r-critical">—</div></div>
+    <div class="kpi high"><div class="label">High Alerts</div><div class="value" id="r-high">—</div></div>
+    <div class="kpi"><div class="label">Total Incidents</div><div class="value" id="r-incidents">—</div></div>
+    <div class="kpi warn"><div class="label">Open Incidents</div><div class="value" id="r-open">—</div></div>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="panel">
+    <h3>Top Source IPs (attack events)</h3>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>#</th><th>IP Address</th><th>Attack Events</th></tr></thead>
+        <tbody id="r-topips"></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="panel">
+    <h3>Most Common Attack Types</h3>
+    <div class="table-wrap">
+      <table class="data">
+        <thead><tr><th>Attack Type</th><th>Events</th></tr></thead>
+        <tbody id="r-types"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="panel">
+  <h3>MITRE ATT&amp;CK Techniques Observed</h3>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr><th>Technique</th><th>Name</th><th>Alerts</th></tr></thead>
+      <tbody id="r-mitre"></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadReport() {
+  const r = await apiGet("/api/reports/summary");
+  document.getElementById("r-events").textContent = r.total_events;
+  document.getElementById("r-alerts").textContent = r.total_alerts;
+  document.getElementById("r-critical").textContent = r.critical_alerts;
+  document.getElementById("r-high").textContent = r.high_alerts;
+  document.getElementById("r-incidents").textContent = r.total_incidents;
+  document.getElementById("r-open").textContent = r.open_incidents;
+
+  document.getElementById("r-topips").innerHTML = r.top_source_ips.map((row, i) =>
+    `<tr><td class="dim">${i + 1}</td><td class="mono">${esc(row.ip)}</td>
+     <td class="mono">${row.count}</td></tr>`).join("") ||
+    '<tr><td colspan="3" class="empty">No data</td></tr>';
+
+  document.getElementById("r-types").innerHTML = r.attack_types.map((row) =>
+    `<tr><td>${esc(row.type)}</td><td class="mono">${row.count}</td></tr>`).join("") ||
+    '<tr><td colspan="2" class="empty">No data</td></tr>';
+
+  document.getElementById("r-mitre").innerHTML = r.mitre_techniques.map((row) =>
+    `<tr><td class="mono">${esc(row.technique)}</td><td>${esc(row.name)}</td>
+     <td class="mono">${row.count}</td></tr>`).join("") ||
+    '<tr><td colspan="3" class="empty">No data</td></tr>';
+}
+onRefresh(loadReport);
+loadReport();
+</script>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Threat Intelligence{% endblock %}
+{% block page_title %}Threat Intelligence{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <h3>IP Reputation (local database) <span class="right dim" id="ti-count"></span></h3>
+  <p class="dim" style="margin-top:0">Version 1 uses a <b>local, simulated</b>
+  threat-intelligence table. The schema mirrors external feeds (AbuseIPDB, OTX)
+  so a real API integration can upsert into the same table later.</p>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr>
+        <th>IP Address</th><th>Reputation</th><th>Threat Type</th>
+        <th>Confidence</th><th>First Seen</th><th>Last Seen</th>
+        <th>Alerts</th><th>Notes</th>
+      </tr></thead>
+      <tbody id="ti-body"><tr><td colspan="8" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function loadIntel() {
+  const entries = await apiGet("/api/threat-intel");
+  document.getElementById("ti-count").textContent = `${entries.length} entries`;
+  const tbody = document.getElementById("ti-body");
+  if (!entries.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty">No entries</td></tr>';
+    return;
+  }
+  tbody.innerHTML = entries.map((t) => `
+    <tr>
+      <td class="mono">${esc(t.ip_address)}</td>
+      <td><span class="badge rep-${esc(t.reputation)}">${esc(t.reputation)}</span></td>
+      <td>${esc(t.threat_type || "—")}</td>
+      <td class="mono">${t.confidence}%</td>
+      <td class="nowrap dim">${t.first_seen ? t.first_seen.slice(0, 10) : "—"}</td>
+      <td class="nowrap dim">${t.last_seen ? t.last_seen.slice(0, 10) : "—"}</td>
+      <td class="mono">${t.alert_count}</td>
+      <td class="dim">${esc(t.notes || "")}</td>
+    </tr>`).join("");
+}
+onRefresh(loadIntel);
+loadIntel();
+</script>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Alert #{{ alert.id }}{% endblock %}
+{% block page_title %}Alert Investigation — #{{ alert.id }}{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <h3>{{ alert.title }}
+    <span class="right">
+      <span class="badge sev-{{ alert.severity }}">{{ alert.severity }}</span>
+      <span class="badge st-{{ alert.status }}" id="alert-status-badge">{{ alert.status.replace('_', ' ') }}</span>
+    </span>
+  </h3>
+  <p class="dim" style="margin:0 0 14px">{{ alert.description }}</p>
+  <div class="actions-row" data-alert-id="{{ alert.id }}" id="alert-actions">
+    <button class="btn" data-status="INVESTIGATING">Mark investigating</button>
+    <button class="btn" data-status="RESOLVED">Resolve</button>
+    <button class="btn" data-status="FALSE_POSITIVE">False positive</button>
+    {% if alert.incident %}
+      <a class="btn primary" href="{{ url_for('main.incident_detail', incident_id=alert.incident.id) }}">
+        View incident #{{ alert.incident.id }}</a>
+    {% else %}
+      <button class="btn primary" id="btn-escalate">Create incident from alert</button>
+    {% endif %}
+    <a class="btn" href="{{ url_for('main.alerts') }}">← Back to alerts</a>
+  </div>
+</div>
+
+<div class="detail-grid">
+  <div>
+    <div class="panel">
+      <h3>Alert Overview</h3>
+      <dl class="kv">
+        <dt>Alert ID</dt><dd class="mono">#{{ alert.id }}</dd>
+        <dt>Timestamp (UTC)</dt><dd>{{ alert.timestamp.strftime('%Y-%m-%d %H:%M:%S') }}</dd>
+        <dt>Detection rule</dt>
+        <dd>{% if alert.rule %}<span class="mono">{{ alert.rule.rule_code }}</span> — {{ alert.rule.name }}
+            <div class="faint">{{ alert.rule.description }}</div>{% else %}Manual{% endif %}</dd>
+        <dt>Event type</dt><dd class="mono">{{ alert.event_type or "—" }}</dd>
+        <dt>Source IP</dt><dd class="mono">{{ alert.source_ip or "—" }}
+          {% if intel %} <span class="badge rep-{{ intel.reputation }}">{{ intel.reputation }}</span>{% endif %}</dd>
+        <dt>Source port</dt><dd class="mono">{{ alert.source_port or "—" }}</dd>
+        <dt>Destination IP</dt><dd class="mono">{{ alert.destination_ip or "—" }}</dd>
+        <dt>Destination port</dt><dd class="mono">{{ alert.destination_port or "—" }}</dd>
+        <dt>Username</dt><dd>{{ alert.username or "—" }}</dd>
+        <dt>Hostname</dt><dd>{{ alert.hostname or "—" }}</dd>
+        <dt>Created</dt><dd>{{ alert.created_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</dd>
+        <dt>Last updated</dt><dd>{{ alert.updated_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</dd>
+      </dl>
+    </div>
+
+    {% if alert.event %}
+    <div class="panel">
+      <h3>Raw Event (#{{ alert.event.id }})</h3>
+      <pre class="rawlog">{{ alert.event.raw_log }}</pre>
+    </div>
+    {% endif %}
+
+    <div class="panel">
+      <h3>Related Events — source {{ alert.source_ip or "n/a" }} (last 15)</h3>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>ID</th><th>Time (UTC)</th><th>Type</th><th>User</th>
+                     <th>Host</th><th>Dst Port</th><th>Result</th></tr></thead>
+          <tbody>
+            {% for e in related_events %}
+            <tr>
+              <td class="mono">#{{ e.id }}</td>
+              <td class="nowrap dim">{{ e.timestamp.strftime('%m-%d %H:%M:%S') }}</td>
+              <td class="mono">{{ e.event_type }}</td>
+              <td>{{ e.username or "—" }}</td>
+              <td class="dim">{{ e.hostname or "—" }}</td>
+              <td class="mono">{{ e.destination_port or "—" }}</td>
+              <td>{{ e.result or "—" }}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" class="empty">No related events</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Related Alerts — same source IP</h3>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>ID</th><th>Time</th><th>Severity</th><th>Title</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for a in related_alerts %}
+            <tr class="clickable" onclick="window.location='/alerts/{{ a.id }}'">
+              <td class="mono">#{{ a.id }}</td>
+              <td class="nowrap dim">{{ a.timestamp.strftime('%m-%d %H:%M') }}</td>
+              <td><span class="badge sev-{{ a.severity }}">{{ a.severity }}</span></td>
+              <td>{{ a.title }}</td>
+              <td><span class="badge st-{{ a.status }}">{{ a.status.replace('_', ' ') }}</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="empty">No other alerts from this source</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <div class="panel">
+      <h3>MITRE ATT&amp;CK Mapping</h3>
+      {% if technique %}
+        <h4 style="margin:0 0 6px"><span class="mono" style="color:var(--accent)">{{ technique.id }}</span>
+            — {{ technique.name }}</h4>
+        <div class="faint" style="margin-bottom:8px">Tactic: {{ technique.tactic }}</div>
+        <p class="dim" style="margin:0 0 10px">{{ technique.description }}</p>
+        <a href="{{ technique.url }}" target="_blank" rel="noopener">attack.mitre.org ↗</a>
+      {% else %}
+        <p class="empty">No technique mapped</p>
+      {% endif %}
+    </div>
+
+    {% if intel %}
+    <div class="panel">
+      <h3>Threat Intelligence (local)</h3>
+      <dl class="kv" style="grid-template-columns:110px 1fr">
+        <dt>Reputation</dt><dd><span class="badge rep-{{ intel.reputation }}">{{ intel.reputation }}</span></dd>
+        <dt>Threat type</dt><dd>{{ intel.threat_type }}</dd>
+        <dt>Confidence</dt><dd>{{ intel.confidence }}%</dd>
+        <dt>First seen</dt><dd>{{ intel.first_seen.strftime('%Y-%m-%d') if intel.first_seen else "—" }}</dd>
+        <dt>Last seen</dt><dd>{{ intel.last_seen.strftime('%Y-%m-%d') if intel.last_seen else "—" }}</dd>
+        <dt>Notes</dt><dd class="dim">{{ intel.notes }}</dd>
+      </dl>
+    </div>
+    {% endif %}
+
+    <div class="panel">
+      <h3>Recommended Investigation Steps</h3>
+      {% if steps %}
+      <ol class="steps">{% for step in steps %}<li>{{ step }}</li>{% endfor %}</ol>
+      {% else %}<p class="empty">No playbook for this alert type</p>{% endif %}
+    </div>
+
+    <div class="panel">
+      <h3>Analyst Notes</h3>
+      <div id="notes-list">
+        {% for note in alert.notes %}
+        <div class="note">
+          <div class="meta">{{ note.author }} — {{ note.created_at.strftime('%Y-%m-%d %H:%M') }} UTC</div>
+          {{ note.content }}
+        </div>
+        {% else %}
+        <p class="empty" id="no-notes">No notes yet</p>
+        {% endfor %}
+      </div>
+      <textarea id="note-input" rows="3" style="width:100%" maxlength="4000"
+                placeholder="Add an investigation note…"></textarea>
+      <div style="margin-top:8px; text-align:right">
+        <button class="btn primary small" id="btn-add-note">Add note</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/alert_detail.js') }}"></script>
+{% endblock %}

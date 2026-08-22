@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Security Events{% endblock %}
+{% block page_title %}Security Events{% endblock %}
+
+{% block content %}
+<div class="filterbar">
+  <label class="f">Search
+    <input type="search" id="f-q" placeholder="raw log, IP, user…" style="width:200px">
+  </label>
+  <label class="f">Event type
+    <select id="f-type">
+      <option value="">All</option>
+      <option>SSH_LOGIN_FAILED</option><option>SSH_LOGIN_SUCCESS</option>
+      <option>PORT_SCAN</option><option>SUSPICIOUS_LOGIN</option>
+      <option>PRIVILEGE_ESCALATION</option><option>WEB_ATTACK</option>
+      <option>MALWARE_INDICATOR</option><option>FIREWALL_BLOCK</option>
+    </select>
+  </label>
+  <label class="f">Severity
+    <select id="f-severity">
+      <option value="">All</option>
+      <option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option>
+      <option>LOW</option><option>INFO</option>
+    </select>
+  </label>
+  <label class="f">Source IP
+    <input type="text" id="f-ip" placeholder="192.168.1.105" style="width:140px">
+  </label>
+  <label class="f">Username
+    <input type="text" id="f-user" style="width:110px">
+  </label>
+  <label class="f">Hostname
+    <input type="text" id="f-host" style="width:110px">
+  </label>
+  <label class="f">From
+    <input type="date" id="f-from">
+  </label>
+  <label class="f">To
+    <input type="date" id="f-to">
+  </label>
+  <button class="btn primary" id="f-apply">Apply</button>
+  <button class="btn" id="f-clear">Clear</button>
+</div>
+
+<div class="panel">
+  <h3>Events <span class="right dim" id="event-count"></span></h3>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr>
+        <th>ID</th><th>Timestamp</th><th>Type</th><th>Source IP</th>
+        <th>Dst IP</th><th>Dst Port</th><th>Proto</th><th>User</th>
+        <th>Host</th><th>Result</th><th>Severity</th>
+      </tr></thead>
+      <tbody id="events-body"><tr><td colspan="11" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+  <div class="pager">
+    <button class="btn small" id="pg-prev">‹ Prev</button>
+    <span id="pg-info"></span>
+    <button class="btn small" id="pg-next">Next ›</button>
+  </div>
+</div>
+
+<!-- event detail modal -->
+<div class="modal-backdrop" id="event-modal">
+  <div class="modal">
+    <h3>Event <span class="mono" id="m-id"></span></h3>
+    <dl class="kv" id="m-fields"></dl>
+    <h3 style="font-size:12px; text-transform:uppercase; color:var(--text-dim); margin:16px 0 8px">Raw log</h3>
+    <pre class="rawlog" id="m-raw"></pre>
+    <div id="m-alerts" style="margin-top:12px"></div>
+    <div style="text-align:right; margin-top:16px">
+      <button class="btn" onclick="document.getElementById('event-modal').classList.remove('open')">Close</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/events.js') }}"></script>
+{% endblock %}

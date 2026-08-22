@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ code }} — MiniSOC</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<div class="login-wrap">
+  <div class="login-card" style="text-align:center">
+    <h1 style="font-size:42px; margin-bottom:8px">{{ code }}</h1>
+    <p class="dim">{{ message }}</p>
+    <a class="btn" href="{{ url_for('main.dashboard') }}" style="justify-content:center">Back to dashboard</a>
+  </div>
+</div>
+</body>
+</html>

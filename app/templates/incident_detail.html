@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}Incident #{{ incident.id }}{% endblock %}
+{% block page_title %}Incident — #{{ incident.id }}{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <h3>{{ incident.title }}
+    <span class="right">
+      <span class="badge sev-{{ incident.severity }}">{{ incident.severity }}</span>
+      <span class="badge st-{{ incident.status }}" id="incident-status-badge">{{ incident.status }}</span>
+    </span>
+  </h3>
+  <p class="dim" style="margin:0 0 14px">{{ incident.description or "No description." }}</p>
+  <div class="actions-row" id="incident-actions" data-incident-id="{{ incident.id }}">
+    <label class="f">Status
+      <select id="status-select">
+        {% for s in ["OPEN", "INVESTIGATING", "CONTAINED", "RESOLVED", "CLOSED"] %}
+        <option value="{{ s }}" {{ "selected" if incident.status == s }}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label class="f">Assigned analyst
+      <input type="text" id="analyst-input" maxlength="80"
+             value="{{ incident.assigned_analyst or '' }}" placeholder="unassigned">
+    </label>
+    <button class="btn primary" id="btn-save" style="align-self:flex-end">Save changes</button>
+    <a class="btn" href="{{ url_for('main.incidents') }}" style="align-self:flex-end">← Back to incidents</a>
+  </div>
+</div>
+
+<div class="detail-grid">
+  <div>
+    <div class="panel">
+      <h3>Incident Details</h3>
+      <dl class="kv">
+        <dt>Incident ID</dt><dd class="mono">#{{ incident.id }}</dd>
+        <dt>Severity</dt><dd><span class="badge sev-{{ incident.severity }}">{{ incident.severity }}</span></dd>
+        <dt>Source IP</dt><dd class="mono">{{ incident.source_ip or "—" }}</dd>
+        <dt>Affected host</dt><dd>{{ incident.affected_host or "—" }}</dd>
+        <dt>Affected user</dt><dd>{{ incident.affected_user or "—" }}</dd>
+        <dt>Detection source</dt><dd>{{ incident.detection_source or "—" }}</dd>
+        <dt>MITRE technique</dt><dd class="mono">{{ incident.mitre_technique or "—" }}</dd>
+        <dt>Created</dt><dd>{{ incident.created_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</dd>
+        <dt>Last updated</dt><dd>{{ incident.updated_at.strftime('%Y-%m-%d %H:%M:%S') }} UTC</dd>
+      </dl>
+    </div>
+
+    <div class="panel">
+      <h3>Linked Alerts</h3>
+      <div class="table-wrap">
+        <table class="data">
+          <thead><tr><th>ID</th><th>Time</th><th>Severity</th><th>Title</th><th>Status</th></tr></thead>
+          <tbody>
+            {% for a in incident.alerts %}
+            <tr class="clickable" onclick="window.location='/alerts/{{ a.id }}'">
+              <td class="mono">#{{ a.id }}</td>
+              <td class="nowrap dim">{{ a.timestamp.strftime('%m-%d %H:%M') }}</td>
+              <td><span class="badge sev-{{ a.severity }}">{{ a.severity }}</span></td>
+              <td>{{ a.title }}</td>
+              <td><span class="badge st-{{ a.status }}">{{ a.status.replace('_', ' ') }}</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="empty">No alerts linked to this incident</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    {% if technique %}
+    <div class="panel">
+      <h3>MITRE ATT&amp;CK Context</h3>
+      <h4 style="margin:0 0 6px"><span class="mono" style="color:var(--accent)">{{ technique.id }}</span>
+          — {{ technique.name }}</h4>
+      <div class="faint" style="margin-bottom:8px">Tactic: {{ technique.tactic }}</div>
+      <p class="dim" style="margin:0 0 10px">{{ technique.description }}</p>
+      <a href="{{ technique.url }}" target="_blank" rel="noopener">attack.mitre.org ↗</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="panel">
+      <h3>Analyst Notes</h3>
+      <div id="notes-list">
+        {% for note in incident.notes %}
+        <div class="note">
+          <div class="meta">{{ note.author }} — {{ note.created_at.strftime('%Y-%m-%d %H:%M') }} UTC</div>
+          {{ note.content }}
+        </div>
+        {% else %}
+        <p class="empty" id="no-notes">No notes yet</p>
+        {% endfor %}
+      </div>
+      <textarea id="note-input" rows="3" style="width:100%" maxlength="4000"
+                placeholder="Add an investigation note…"></textarea>
+      <div style="margin-top:8px; text-align:right">
+        <button class="btn primary small" id="btn-add-note">Add note</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/incident_detail.js') }}"></script>
+{% endblock %}

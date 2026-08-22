@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+<div class="panel">
+  <h3>Detection Rules</h3>
+  <p class="dim" style="margin-top:0">Rules live in the database; toggling a rule
+  off means the detection engine skips it for new events. Thresholds and windows
+  are stored per rule.</p>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr>
+        <th>Code</th><th>Name</th><th>Severity</th><th>MITRE</th>
+        <th>Threshold</th><th>Window</th><th>Description</th><th>Enabled</th>
+      </tr></thead>
+      <tbody>
+        {% for r in rules %}
+        <tr>
+          <td class="mono">{{ r.rule_code }}</td>
+          <td>{{ r.name }}</td>
+          <td><span class="badge sev-{{ r.severity }}">{{ r.severity }}</span></td>
+          <td class="mono">{{ r.mitre_technique }}</td>
+          <td class="mono">{{ r.threshold }}</td>
+          <td class="mono">{{ r.window_minutes }} min</td>
+          <td class="dim">{{ r.description }}</td>
+          <td>
+            <span class="toggle">
+              <input type="checkbox" id="rule-{{ r.id }}" data-rule-id="{{ r.id }}"
+                     class="rule-toggle" {{ "checked" if r.enabled }}>
+              <label class="track" for="rule-{{ r.id }}"></label>
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="grid-2">
+  <div class="panel">
+    <h3>Environment</h3>
+    <dl class="kv">
+      <dt>Mode</dt><dd>Simulation / demo (no live log ingestion)</dd>
+      <dt>Database</dt><dd class="mono">SQLite — data/minisoc.db</dd>
+      <dt>Detection engine</dt><dd>Runs on every simulated event batch</dd>
+      <dt>Auto-refresh</dt><dd>Toggle in the top bar (10 s polling)</dd>
+    </dl>
+  </div>
+  <div class="panel">
+    <h3>Configuration (.env)</h3>
+    <p class="dim" style="margin-top:0">Secrets are loaded from environment
+    variables — nothing is hardcoded. See <span class="mono">.env.example</span>:</p>
+    <dl class="kv">
+      <dt class="mono">SECRET_KEY</dt><dd>Flask session signing key</dd>
+      <dt class="mono">DEFAULT_ANALYST_PASSWORD</dt><dd>Seeded analyst password (hashed at seed time)</dd>
+      <dt class="mono">DATABASE_URL</dt><dd>Optional database override</dd>
+      <dt class="mono">FLASK_DEBUG</dt><dd>Debug mode, off by default</dd>
+    </dl>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll(".rule-toggle").forEach((box) => {
+  box.addEventListener("change", async () => {
+    try {
+      const rule = await apiSend(`/api/rules/${box.dataset.ruleId}`, "PATCH",
+                                 { enabled: box.checked });
+      toast(`Rule ${esc(rule.rule_code)} ${rule.enabled ? "enabled" : "disabled"}`, "ok");
+    } catch (err) {
+      box.checked = !box.checked;   // revert on failure
+      toast(`Failed to update rule: ${esc(err.message)}`, "alert");
+    }
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Alerts{% endblock %}
+{% block page_title %}Alert Management{% endblock %}
+
+{% block content %}
+<div class="filterbar">
+  <label class="f">Search
+    <input type="search" id="f-q" placeholder="title, IP, user, MITRE…" style="width:220px">
+  </label>
+  <label class="f">Severity
+    <select id="f-severity">
+      <option value="">All</option>
+      <option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option>
+      <option>LOW</option><option>INFO</option>
+    </select>
+  </label>
+  <label class="f">Status
+    <select id="f-status">
+      <option value="">All</option>
+      <option>NEW</option><option>INVESTIGATING</option>
+      <option>RESOLVED</option><option value="FALSE_POSITIVE">FALSE POSITIVE</option>
+    </select>
+  </label>
+  <label class="f">Source IP
+    <input type="text" id="f-ip" placeholder="e.g. 192.168.1.105" style="width:150px">
+  </label>
+  <label class="f">From
+    <input type="date" id="f-from">
+  </label>
+  <label class="f">To
+    <input type="date" id="f-to">
+  </label>
+  <button class="btn primary" id="f-apply">Apply</button>
+  <button class="btn" id="f-clear">Clear</button>
+</div>
+
+<div class="panel">
+  <h3>Alerts <span class="right dim" id="alert-count"></span></h3>
+  <div class="table-wrap">
+    <table class="data">
+      <thead><tr>
+        <th>ID</th><th>Timestamp</th><th>Severity</th><th>Title</th>
+        <th>Detection Rule</th><th>Source IP</th><th>User</th><th>Host</th>
+        <th>MITRE</th><th>Status</th>
+      </tr></thead>
+      <tbody id="alerts-body"><tr><td colspan="10" class="empty">Loading…</td></tr></tbody>
+    </table>
+  </div>
+  <div class="pager">
+    <button class="btn small" id="pg-prev">‹ Prev</button>
+    <span id="pg-info"></span>
+    <button class="btn small" id="pg-next">Next ›</button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/alerts.js') }}"></script>
+{% endblock %}
