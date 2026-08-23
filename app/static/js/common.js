@@ -1,5 +1,5 @@
 /* MiniSOC shared front-end helpers: API fetch (with CSRF), formatting,
-   badges, toasts, the simulate button, and the auto-refresh toggle. */
+   badges, toasts, and the auto-refresh toggle. */
 
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || "";
 
@@ -62,8 +62,15 @@ function timeAgo(iso) {
   return `${Math.floor(secs / 86400)}d ago`;
 }
 
+const SEV_LABELS = { CRITICAL: "Critical", HIGH: "High", MEDIUM: "Medium",
+                     LOW: "Low", INFO: "Informational" };
+
 function sevBadge(sev) {
-  return `<span class="badge sev-${esc(sev)}">${esc(sev)}</span>`;
+  return `<span class="badge sev-${esc(sev)}">${esc(SEV_LABELS[sev] || sev)}</span>`;
+}
+
+function eventTypeBadge(type) {
+  return `<span class="et et-${esc(type)}">${esc(type)}</span>`;
 }
 
 function statusBadge(status) {
@@ -83,9 +90,9 @@ function toast(message, kind = "") {
   setTimeout(() => el.remove(), 6000);
 }
 
-/* ---------- simulate button + refresh bus ---------- */
+/* ---------- refresh bus ---------- */
 
-/* Pages register a loader; the simulate button and auto-refresh reuse it. */
+/* Pages register a loader; the auto-refresh timer reuses it. */
 function onRefresh(fn) {
   window._refreshFns = window._refreshFns || [];
   window._refreshFns.push(fn);
@@ -94,29 +101,6 @@ function onRefresh(fn) {
 function triggerRefresh() {
   (window._refreshFns || []).forEach((fn) => fn());
 }
-
-document.getElementById("btn-simulate")?.addEventListener("click", async (ev) => {
-  const btn = ev.currentTarget;
-  btn.disabled = true;
-  try {
-    const result = await apiSend("/api/simulate", "POST", {});
-    const scenario = esc(result.scenario.replaceAll("_", " "));
-    if (result.alerts_created > 0) {
-      const alerts = result.alerts
-        .map((a) => `${sevBadge(a.severity)} ${esc(a.title)}`).join("<br>");
-      toast(`Simulated <b>${scenario}</b>: ${result.events_created} event(s) → ` +
-            `<b>${result.alerts_created} alert(s)</b><br>${alerts}`, "alert");
-    } else {
-      toast(`Simulated <b>${scenario}</b>: ${result.events_created} event(s), ` +
-            `no detection rule matched.`, "ok");
-    }
-    triggerRefresh();
-  } catch (err) {
-    toast(`Simulation failed: ${esc(err.message)}`, "alert");
-  } finally {
-    btn.disabled = false;
-  }
-});
 
 /* Auto-refresh toggle (persists across pages via localStorage). */
 (function initAutoRefresh() {

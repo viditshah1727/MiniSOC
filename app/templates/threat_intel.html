@@ -5,9 +5,9 @@
 {% block content %}
 <div class="panel">
   <h3>IP Reputation (local database) <span class="right dim" id="ti-count"></span></h3>
-  <p class="dim" style="margin-top:0">Version 1 uses a <b>local, simulated</b>
-  threat-intelligence table. The schema mirrors external feeds (AbuseIPDB, OTX)
-  so a real API integration can upsert into the same table later.</p>
+  <p class="dim" style="margin-top:0">Local IP-reputation database maintained by
+  the SOC. The schema mirrors external feeds (AbuseIPDB, OTX) so a live feed
+  integration can enrich the same table.</p>
   <div class="table-wrap">
     <table class="data">
       <thead><tr>

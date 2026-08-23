@@ -19,7 +19,7 @@
         <tr>
           <td class="mono">{{ r.rule_code }}</td>
           <td>{{ r.name }}</td>
-          <td><span class="badge sev-{{ r.severity }}">{{ r.severity }}</span></td>
+          <td><span class="badge sev-{{ r.severity }}">{{ r.severity | sev_label }}</span></td>
           <td class="mono">{{ r.mitre_technique }}</td>
           <td class="mono">{{ r.threshold }}</td>
           <td class="mono">{{ r.window_minutes }} min</td>
@@ -40,23 +40,25 @@
 
 <div class="grid-2">
   <div class="panel">
-    <h3>Environment</h3>
+    <h3>System Configuration</h3>
     <dl class="kv">
-      <dt>Mode</dt><dd>Simulation / demo (no live log ingestion)</dd>
+      <dt>Event source</dt><dd>Controlled event generator (log ingestion planned)</dd>
       <dt>Database</dt><dd class="mono">SQLite — data/minisoc.db</dd>
-      <dt>Detection engine</dt><dd>Runs on every simulated event batch</dd>
-      <dt>Auto-refresh</dt><dd>Toggle in the top bar (10 s polling)</dd>
+      <dt>Detection engine</dt><dd>Correlation rules over incoming events</dd>
+      <dt>Dashboard refresh</dt><dd>Auto-refresh toggle in the top bar (10 s polling)</dd>
+      <dt>Configuration</dt><dd>Environment variables via <span class="mono">.env</span>
+        (<span class="mono">SECRET_KEY</span>, <span class="mono">DATABASE_URL</span>,
+        <span class="mono">FLASK_DEBUG</span>) — values are never displayed</dd>
     </dl>
   </div>
   <div class="panel">
-    <h3>Configuration (.env)</h3>
-    <p class="dim" style="margin-top:0">Secrets are loaded from environment
-    variables — nothing is hardcoded. See <span class="mono">.env.example</span>:</p>
+    <h3>Account</h3>
     <dl class="kv">
-      <dt class="mono">SECRET_KEY</dt><dd>Flask session signing key</dd>
-      <dt class="mono">DEFAULT_ANALYST_PASSWORD</dt><dd>Seeded analyst password (hashed at seed time)</dd>
-      <dt class="mono">DATABASE_URL</dt><dd>Optional database override</dd>
-      <dt class="mono">FLASK_DEBUG</dt><dd>Debug mode, off by default</dd>
+      <dt>Signed in as</dt><dd>{{ current_analyst }}</dd>
+      <dt>Role</dt><dd>SOC Analyst</dd>
+      <dt>Session</dt><dd>Server-side session, HttpOnly cookie, CSRF-protected</dd>
+      <dt>Password</dt><dd class="dim">Stored as a salted hash; set via environment
+        at provisioning time</dd>
     </dl>
   </div>
 </div>

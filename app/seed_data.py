@@ -52,13 +52,21 @@ def _days_ago(days, hour=None, minute=None):
 
 
 def seed_users():
-    """Default dashboard login. Password comes from .env (DEFAULT_ANALYST_PASSWORD)
-    or falls back to a documented dev-only default."""
+    """Default dashboard login. The password comes from the environment
+    (DEFAULT_ANALYST_PASSWORD); if unset, a random one is generated and
+    printed once so no password is ever hardcoded."""
     import os
+    import secrets
     if User.query.filter_by(username="analyst").first():
         return
-    user = User(username="analyst", display_name="SOC Analyst", role="analyst")
-    user.set_password(os.environ.get("DEFAULT_ANALYST_PASSWORD", "ChangeMe_123!"))
+    username = os.environ.get("DEFAULT_ANALYST_USERNAME", "analyst")
+    password = os.environ.get("DEFAULT_ANALYST_PASSWORD")
+    if not password or password == "CHANGE_ME":
+        password = secrets.token_urlsafe(12)
+        print(f"DEFAULT_ANALYST_PASSWORD not set — generated password for "
+              f"'{username}': {password}")
+    user = User(username=username, display_name="SOC Analyst", role="analyst")
+    user.set_password(password)
     db.session.add(user)
 
 

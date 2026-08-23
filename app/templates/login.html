@@ -9,22 +9,37 @@
 </head>
 <body>
 <div class="login-wrap">
-  <form class="login-card" method="post" action="{{ url_for('auth.login', next=request.args.get('next')) }}">
-    <h1>Mini<span>SOC</span></h1>
-    <div class="sub">Security Operations Center — analyst sign-in</div>
-    {% with messages = get_flashed_messages() %}
-      {% for message in messages %}<div class="flash">{{ message }}</div>{% endfor %}
-    {% endwith %}
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <label>Username
-      <input type="text" name="username" autocomplete="username" maxlength="80" required autofocus>
-    </label>
-    <label>Password
-      <input type="password" name="password" autocomplete="current-password" required>
-    </label>
-    <button class="btn primary" type="submit">Sign in</button>
-    <p class="sub" style="margin-top:18px">Demo environment — simulated data only</p>
-  </form>
+  <div class="login-shell">
+    <div class="login-visual">
+      <svg class="shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z"/>
+        <path d="M8.5 12l2.5 2.5 4.5-4.5"/>
+      </svg>
+      <h2>MINISOC</h2>
+      <div class="visual-sub">Security Operations Center</div>
+      <ul class="visual-points">
+        <li>Event monitoring &amp; correlation</li>
+        <li>MITRE ATT&amp;CK-mapped detections</li>
+        <li>Alert triage &amp; incident response</li>
+      </ul>
+    </div>
+    <form class="login-card" method="post" action="{{ url_for('auth.login', next=request.args.get('next')) }}">
+      <h1>MINI<span>SOC</span></h1>
+      <div class="sub">Security Monitoring &amp; Incident Response Platform</div>
+      {% with messages = get_flashed_messages() %}
+        {% for message in messages %}<div class="flash">{{ message }}</div>{% endfor %}
+      {% endwith %}
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <label>Username
+        <input type="text" name="username" autocomplete="username" maxlength="80" required autofocus>
+      </label>
+      <label>Password
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <button class="btn primary" type="submit">Sign In</button>
+      <p class="login-footer">Authorized access only</p>
+    </form>
+  </div>
 </div>
 </body>
 </html>

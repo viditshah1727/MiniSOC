@@ -11,6 +11,12 @@ document.getElementById("btn-save").addEventListener("click", async () => {
     const badge = document.getElementById("incident-status-badge");
     badge.textContent = updated.status;
     badge.className = `badge st-${updated.status}`;
+    // keep the workflow strip in sync
+    const steps = [...document.querySelectorAll("#status-flow .step")];
+    const idx = steps.findIndex((s) => s.dataset.step === updated.status);
+    steps.forEach((s, i) => {
+      s.className = "step" + (i === idx ? " current" : (i < idx ? " done" : ""));
+    });
     toast(`Incident #${incidentId} updated`, "ok");
   } catch (err) {
     toast(`Update failed: ${esc(err.message)}`, "alert");

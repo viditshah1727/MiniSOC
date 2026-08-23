@@ -16,9 +16,8 @@ def main():
     app = create_app()
     with app.app_context():
         summary = seed_all(reset=True)
-    print("Done. Log in as 'analyst' with the password from "
-          "DEFAULT_ANALYST_PASSWORD in your .env "
-          "(default: ChangeMe_123!).")
+    print("Done. Log in with the analyst account configured via "
+          "DEFAULT_ANALYST_USERNAME / DEFAULT_ANALYST_PASSWORD in your .env.")
     return summary
 
 

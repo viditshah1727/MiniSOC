@@ -76,6 +76,14 @@ def create_app(test_config=None):
         return {"csrf_token": get_csrf_token,
                 "current_analyst": session.get("display_name")}
 
+    # Display labels for severity codes (DB stores the uppercase codes).
+    SEV_LABELS = {"CRITICAL": "Critical", "HIGH": "High", "MEDIUM": "Medium",
+                  "LOW": "Low", "INFO": "Informational"}
+
+    @app.template_filter("sev_label")
+    def sev_label(value):
+        return SEV_LABELS.get(value, value)
+
     # --- blueprints ---------------------------------------------------------
     from app.auth import auth_bp
     from app.routes import main_bp

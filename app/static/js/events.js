@@ -29,7 +29,7 @@ async function loadEvents() {
       <tr class="clickable" data-event-id="${e.id}">
         <td class="mono">#${e.id}</td>
         <td class="nowrap dim">${fmtTime(e.timestamp)}</td>
-        <td class="mono">${esc(e.event_type)}</td>
+        <td>${eventTypeBadge(e.event_type)}</td>
         <td class="mono">${esc(e.source_ip || "—")}</td>
         <td class="mono">${esc(e.destination_ip || "—")}</td>
         <td class="mono">${esc(e.destination_port ?? "—")}</td>

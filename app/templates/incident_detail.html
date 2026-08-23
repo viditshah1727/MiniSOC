@@ -6,11 +6,19 @@
 <div class="panel">
   <h3>{{ incident.title }}
     <span class="right">
-      <span class="badge sev-{{ incident.severity }}">{{ incident.severity }}</span>
+      <span class="badge sev-{{ incident.severity }}">{{ incident.severity | sev_label }}</span>
       <span class="badge st-{{ incident.status }}" id="incident-status-badge">{{ incident.status }}</span>
     </span>
   </h3>
   <p class="dim" style="margin:0 0 14px">{{ incident.description or "No description." }}</p>
+  {% set flow = ["OPEN", "INVESTIGATING", "CONTAINED", "RESOLVED", "CLOSED"] %}
+  {% set current_idx = flow.index(incident.status) if incident.status in flow else 0 %}
+  <div class="status-flow" id="status-flow">
+    {% for s in flow %}
+    <div class="step {{ 'current' if loop.index0 == current_idx else ('done' if loop.index0 < current_idx) }}"
+         data-step="{{ s }}">{{ s }}</div>
+    {% endfor %}
+  </div>
   <div class="actions-row" id="incident-actions" data-incident-id="{{ incident.id }}">
     <label class="f">Status
       <select id="status-select">
@@ -34,7 +42,7 @@
       <h3>Incident Details</h3>
       <dl class="kv">
         <dt>Incident ID</dt><dd class="mono">#{{ incident.id }}</dd>
-        <dt>Severity</dt><dd><span class="badge sev-{{ incident.severity }}">{{ incident.severity }}</span></dd>
+        <dt>Severity</dt><dd><span class="badge sev-{{ incident.severity }}">{{ incident.severity | sev_label }}</span></dd>
         <dt>Source IP</dt><dd class="mono">{{ incident.source_ip or "—" }}</dd>
         <dt>Affected host</dt><dd>{{ incident.affected_host or "—" }}</dd>
         <dt>Affected user</dt><dd>{{ incident.affected_user or "—" }}</dd>
@@ -55,7 +63,7 @@
             <tr class="clickable" onclick="window.location='/alerts/{{ a.id }}'">
               <td class="mono">#{{ a.id }}</td>
               <td class="nowrap dim">{{ a.timestamp.strftime('%m-%d %H:%M') }}</td>
-              <td><span class="badge sev-{{ a.severity }}">{{ a.severity }}</span></td>
+              <td><span class="badge sev-{{ a.severity }}">{{ a.severity | sev_label }}</span></td>
               <td>{{ a.title }}</td>
               <td><span class="badge st-{{ a.status }}">{{ a.status.replace('_', ' ') }}</span></td>
             </tr>
@@ -80,6 +88,34 @@
   </div>
 
   <div>
+    <div class="panel">
+      <h3>Timeline</h3>
+      <ul class="timeline">
+        <li>
+          <div class="t-when">{{ incident.created_at.strftime('%Y-%m-%d %H:%M') }} UTC</div>
+          Incident created{% if incident.detection_source %} from
+          <span class="dim">{{ incident.detection_source }}</span>{% endif %}
+        </li>
+        {% for a in incident.alerts %}
+        <li>
+          <div class="t-when">{{ a.timestamp.strftime('%Y-%m-%d %H:%M') }} UTC</div>
+          Alert <a href="{{ url_for('main.alert_detail', alert_id=a.id) }}">#{{ a.id }}</a> linked
+          — {{ a.title }}
+        </li>
+        {% endfor %}
+        {% for note in incident.notes %}
+        <li>
+          <div class="t-when">{{ note.created_at.strftime('%Y-%m-%d %H:%M') }} UTC</div>
+          Note added by {{ note.author }}
+        </li>
+        {% endfor %}
+        <li>
+          <div class="t-when">{{ incident.updated_at.strftime('%Y-%m-%d %H:%M') }} UTC</div>
+          Last updated — status <span class="badge st-{{ incident.status }}">{{ incident.status }}</span>
+        </li>
+      </ul>
+    </div>
+
     <div class="panel">
       <h3>Analyst Notes</h3>
       <div id="notes-list">

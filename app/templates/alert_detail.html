@@ -6,7 +6,7 @@
 <div class="panel">
   <h3>{{ alert.title }}
     <span class="right">
-      <span class="badge sev-{{ alert.severity }}">{{ alert.severity }}</span>
+      <span class="badge sev-{{ alert.severity }}">{{ alert.severity | sev_label }}</span>
       <span class="badge st-{{ alert.status }}" id="alert-status-badge">{{ alert.status.replace('_', ' ') }}</span>
     </span>
   </h3>
@@ -50,7 +50,7 @@
 
     {% if alert.event %}
     <div class="panel">
-      <h3>Raw Event (#{{ alert.event.id }})</h3>
+      <h3>Evidence — Raw Event #{{ alert.event.id }}</h3>
       <pre class="rawlog">{{ alert.event.raw_log }}</pre>
     </div>
     {% endif %}
@@ -66,7 +66,7 @@
             <tr>
               <td class="mono">#{{ e.id }}</td>
               <td class="nowrap dim">{{ e.timestamp.strftime('%m-%d %H:%M:%S') }}</td>
-              <td class="mono">{{ e.event_type }}</td>
+              <td><span class="et et-{{ e.event_type }}">{{ e.event_type }}</span></td>
               <td>{{ e.username or "—" }}</td>
               <td class="dim">{{ e.hostname or "—" }}</td>
               <td class="mono">{{ e.destination_port or "—" }}</td>
@@ -90,7 +90,7 @@
             <tr class="clickable" onclick="window.location='/alerts/{{ a.id }}'">
               <td class="mono">#{{ a.id }}</td>
               <td class="nowrap dim">{{ a.timestamp.strftime('%m-%d %H:%M') }}</td>
-              <td><span class="badge sev-{{ a.severity }}">{{ a.severity }}</span></td>
+              <td><span class="badge sev-{{ a.severity }}">{{ a.severity | sev_label }}</span></td>
               <td>{{ a.title }}</td>
               <td><span class="badge st-{{ a.status }}">{{ a.status.replace('_', ' ') }}</span></td>
             </tr>
@@ -119,7 +119,7 @@
 
     {% if intel %}
     <div class="panel">
-      <h3>Threat Intelligence (local)</h3>
+      <h3>Threat Intelligence</h3>
       <dl class="kv" style="grid-template-columns:110px 1fr">
         <dt>Reputation</dt><dd><span class="badge rep-{{ intel.reputation }}">{{ intel.reputation }}</span></dd>
         <dt>Threat type</dt><dd>{{ intel.threat_type }}</dd>
@@ -132,7 +132,7 @@
     {% endif %}
 
     <div class="panel">
-      <h3>Recommended Investigation Steps</h3>
+      <h3>Recommended Actions</h3>
       {% if steps %}
       <ol class="steps">{% for step in steps %}<li>{{ step }}</li>{% endfor %}</ol>
       {% else %}<p class="empty">No playbook for this alert type</p>{% endif %}

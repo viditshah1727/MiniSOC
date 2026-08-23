@@ -546,8 +546,7 @@ def report_export():
     summary = _report_summary()
     buffer = io.StringIO()
     writer = csv.writer(buffer)
-    writer.writerow(["MiniSOC Security Report (simulated data)",
-                     summary["generated_at"]])
+    writer.writerow(["MiniSOC Security Report", summary["generated_at"]])
     writer.writerow([])
     writer.writerow(["Total events", summary["total_events"]])
     writer.writerow(["Total alerts", summary["total_alerts"]])
