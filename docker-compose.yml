@@ -1,0 +1,23 @@
+# Local PostgreSQL for MiniSOC. This is the only container in the project:
+# the API and the web client run directly with Node (`npm run dev`).
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: minisoc-postgres
+    environment:
+      POSTGRES_USER: minisoc
+      POSTGRES_PASSWORD: minisoc
+      POSTGRES_DB: minisoc
+    ports:
+      - "5432:5432"
+    volumes:
+      # PostgreSQL 18 images keep data under /var/lib/postgresql/<version>/
+      - minisoc-pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U minisoc -d minisoc"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  minisoc-pgdata:

@@ -1,0 +1,257 @@
+// MiniSOC data model
+//
+//   Event ──(detection rule matches)──▶ Alert ──(analyst escalates)──▶ Incident
+//
+// Supporting data: DetectionRule (what fired), MitreTechnique (ATT&CK context),
+// ThreatIntelligence (known-bad indicators), Activity (notes + audit trail
+// behind alert/incident timelines) and User (analysts who log in).
+//
+// Conventions: tables/columns are snake_case in PostgreSQL (@@map / @map),
+// every timestamp is `timestamptz`, and IP addresses use the native `inet` type.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN // everything, including rule management
+  ANALYST // triage alerts, run incidents, ingest events, add intel
+  VIEWER // read-only
+}
+
+enum Severity {
+  INFO
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum EventType {
+  AUTH_SUCCESS
+  AUTH_FAILURE
+  NETWORK_CONNECTION
+  PROCESS_EXECUTION
+  DNS_QUERY
+  FILE_DOWNLOAD
+}
+
+enum AlertStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED
+  FALSE_POSITIVE
+}
+
+enum IncidentStatus {
+  OPEN
+  INVESTIGATING
+  RESOLVED
+  CLOSED
+}
+
+enum IndicatorType {
+  IP
+  DOMAIN
+  HASH
+}
+
+enum Reputation {
+  MALICIOUS
+  SUSPICIOUS
+  BENIGN
+}
+
+enum ActivityType {
+  CREATED
+  STATUS_CHANGE
+  ASSIGNMENT
+  NOTE
+  ALERT_LINKED
+}
+
+// ─── Models ─────────────────────────────────────────────────────────────────
+
+model User {
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  name         String
+  passwordHash String   @map("password_hash") // bcrypt hash, never the password
+  role         Role     @default(VIEWER) // least privilege by default
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  assignedIncidents Incident[]
+  activities        Activity[]
+
+  @@map("users")
+}
+
+/// One raw security event (a parsed log line) from any log source.
+model Event {
+  id              Int       @id @default(autoincrement())
+  timestamp       DateTime  @db.Timestamptz(3) // when it happened, per the log source
+  source          String // log source, e.g. "sshd", "firewall", "sudo", "dns"
+  eventType       EventType @map("event_type")
+  severity        Severity  @default(INFO)
+  sourceIp        String?   @map("source_ip") @db.Inet
+  destinationIp   String?   @map("destination_ip") @db.Inet
+  destinationPort Int?      @map("destination_port")
+  hostname        String? // asset the event was observed on
+  username        String?
+  message         String
+  metadata        Json? // JSONB: source-specific fields (command, domain, file hash, ...)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(3) // when MiniSOC ingested it
+
+  triggeredAlerts Alert[] @relation("TriggerEvent")
+  evidenceFor     Alert[] @relation("AlertEvidence")
+
+  @@index([timestamp])
+  @@index([eventType, timestamp])
+  @@index([sourceIp, eventType, timestamp]) // rule look-backs: "failures from this IP in the last N min"
+  @@index([username, eventType, timestamp]) // per-user login baselines
+  @@map("events")
+}
+
+/// Rule metadata and tunables. The matching logic lives in code
+/// (src/detection/rules), linked to this row by `code`.
+model DetectionRule {
+  id               Int      @id @default(autoincrement())
+  code             String   @unique // e.g. "R001"
+  name             String
+  description      String
+  severity         Severity
+  threshold        Int? // count-based rules: how many events must match
+  windowMinutes    Int?     @map("window_minutes") // count-based rules: look-back window
+  enabled          Boolean  @default(true)
+  recommendedSteps String[] @map("recommended_steps") // investigation playbook
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  techniques MitreTechnique[] @relation("RuleTechniques")
+  alerts     Alert[]
+
+  @@map("detection_rules")
+}
+
+/// A MITRE ATT&CK technique (local reference subset, not the full framework).
+model MitreTechnique {
+  id          String   @id // ATT&CK ID, e.g. "T1110"
+  name        String
+  tactics     String[]
+  description String
+
+  rules  DetectionRule[] @relation("RuleTechniques")
+  alerts Alert[]
+
+  @@map("mitre_techniques")
+}
+
+/// A known indicator of compromise (IOC) with its reputation.
+model ThreatIntelligence {
+  id          Int           @id @default(autoincrement())
+  indicator   String // IP address, domain or file hash (stored lowercase)
+  type        IndicatorType
+  reputation  Reputation
+  confidence  Int // 0-100 (CHECK constraint in the migration)
+  source      String // where the intel came from, e.g. "internal-honeypot"
+  description String?
+  firstSeen   DateTime      @map("first_seen") @db.Timestamptz(3)
+  lastSeen    DateTime      @map("last_seen") @db.Timestamptz(3)
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  alerts Alert[]
+
+  @@unique([indicator, type])
+  @@map("threat_intelligence")
+}
+
+/// Raised by the detection engine when a rule matches.
+model Alert {
+  id          Int         @id @default(autoincrement())
+  title       String
+  description String // plain-language explanation of why the rule fired
+  severity    Severity
+  status      AlertStatus @default(OPEN)
+  riskScore   Int         @map("risk_score") // 0-100 (CHECK constraint in the migration)
+  riskFactors Json        @map("risk_factors") // [{ label, points }]: how the score was built
+  evidence    Json        @db.Json // facts the rule measured; plain JSON (not JSONB) keeps the key order the rule wrote
+  dedupKey    String      @map("dedup_key") // the entity it is about, e.g. "ip:203.0.113.45"
+  sourceIp    String?     @map("source_ip") @db.Inet
+  hostname    String? // target asset
+  username    String? // account involved
+  detectedAt  DateTime    @map("detected_at") @db.Timestamptz(3) // event-time of the trigger event
+  createdAt   DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  ruleId           Int     @map("rule_id")
+  eventId          Int     @map("event_id") // the event that completed the pattern
+  mitreTechniqueId String? @map("mitre_technique_id")
+  threatIntelId    Int?    @map("threat_intel_id") // matched indicator, if any
+  incidentId       Int?    @map("incident_id")
+
+  rule           DetectionRule       @relation(fields: [ruleId], references: [id])
+  event          Event               @relation("TriggerEvent", fields: [eventId], references: [id])
+  evidenceEvents Event[]             @relation("AlertEvidence")
+  mitreTechnique MitreTechnique?     @relation(fields: [mitreTechniqueId], references: [id])
+  threatIntel    ThreatIntelligence? @relation(fields: [threatIntelId], references: [id], onDelete: SetNull)
+  incident       Incident?           @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+  activities     Activity[]
+
+  @@index([status, severity])
+  @@index([detectedAt])
+  @@index([sourceIp])
+  @@index([ruleId, dedupKey, detectedAt]) // alert suppression look-ups
+  @@index([incidentId])
+  @@map("alerts")
+}
+
+/// A tracked investigation, escalated from one or more alerts.
+model Incident {
+  id          Int            @id @default(autoincrement())
+  title       String
+  description String?
+  severity    Severity
+  status      IncidentStatus @default(OPEN)
+  assigneeId  Int?           @map("assignee_id")
+  resolvedAt  DateTime?      @map("resolved_at") @db.Timestamptz(3)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  assignee   User?      @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  alerts     Alert[]
+  activities Activity[]
+
+  @@index([status])
+  @@map("incidents")
+}
+
+/// Append-only log of what happened to an alert or incident: notes, status
+/// changes, assignments. Powers the timelines and doubles as an audit trail.
+model Activity {
+  id         Int          @id @default(autoincrement())
+  type       ActivityType
+  message    String
+  alertId    Int?         @map("alert_id")
+  incidentId Int?         @map("incident_id")
+  userId     Int?         @map("user_id") // null = done by the system
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  alert    Alert?    @relation(fields: [alertId], references: [id], onDelete: Cascade)
+  incident Incident? @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([alertId, createdAt])
+  @@index([incidentId, createdAt])
+  @@map("activities")
+}

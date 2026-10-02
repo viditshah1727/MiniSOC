@@ -20,3 +20,12 @@ data/*.db-journal
 .idea/
 *.swp
 .DS_Store
+
+# --- MiniSOC v2 (Node) ---
+node_modules/
+dist/
+coverage/
+*.log
+*.tsbuildinfo
+# Prisma client is generated from schema.prisma (`npm run db:generate`)
+server/src/generated/

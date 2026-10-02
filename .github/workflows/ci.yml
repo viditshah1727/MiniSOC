@@ -1,0 +1,39 @@
+# Typecheck, test and build both apps on every push and pull request.
+# The API tests need a real PostgreSQL, provided as a service container.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: minisoc
+          POSTGRES_PASSWORD: minisoc
+          POSTGRES_DB: minisoc
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U minisoc -d minisoc"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      # The test suite derives its own database (minisoc_test) from this URL.
+      DATABASE_URL: postgresql://minisoc:minisoc@localhost:5432/minisoc
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
